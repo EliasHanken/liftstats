@@ -43,3 +43,24 @@ export async function searchLifters(
   const list = (rows as any).rows ?? rows;
   return list as SearchHit[];
 }
+
+// Like searchLifters but with a much lower similarity threshold. Used as a
+// "did you mean" fallback when the strict search returns zero results.
+export async function searchLiftersRelaxed(
+  db: AnyDb,
+  { q, limit = 5 }: SearchArgs,
+): Promise<SearchHit[]> {
+  const trimmed = q.trim();
+  if (trimmed.length === 0) return [];
+
+  const rows = await db.execute(sql`
+    SELECT slug, name, sex, country, primary_fed AS "primaryFed",
+           word_similarity(${trimmed}, name) AS similarity
+    FROM lifter
+    WHERE word_similarity(${trimmed}, name) > 0.1
+    ORDER BY similarity DESC, name ASC
+    LIMIT ${limit}
+  `);
+  const list = (rows as any).rows ?? rows;
+  return list as SearchHit[];
+}

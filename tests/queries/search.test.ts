@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, type TestDb } from '@/lib/test/db';
-import { searchLifters } from '@/lib/db/queries/search';
+import { searchLifters, searchLiftersRelaxed } from '@/lib/db/queries/search';
 import { lifter } from '@/lib/db/schema';
 
 describe('searchLifters', () => {
@@ -50,5 +50,17 @@ describe('searchLifters', () => {
       name: expect.any(String),
       sex: expect.stringMatching(/^[MF]$|^Mx$/),
     });
+  });
+
+  it('searchLiftersRelaxed returns hits even for low-similarity queries', async () => {
+    const r = await searchLiftersRelaxed(t.db, { q: 'jhn', limit: 3 });
+    expect(r.length).toBeGreaterThan(0);
+    // 'jhn' is a low-similarity prefix of 'John Haack'
+    expect(r.some((h) => h.slug === 'john-haack')).toBe(true);
+  });
+
+  it('searchLiftersRelaxed still returns empty for utterly nonsense queries', async () => {
+    const r = await searchLiftersRelaxed(t.db, { q: 'xqzpw', limit: 3 });
+    expect(r).toHaveLength(0);
   });
 });
