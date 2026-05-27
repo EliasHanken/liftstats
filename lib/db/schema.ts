@@ -49,7 +49,7 @@ export const entry = pgTable('entry', {
   lifterId: integer('lifter_id').notNull().references(() => lifter.id, { onDelete: 'cascade' }),
   meetId: integer('meet_id').notNull().references(() => meet.id, { onDelete: 'cascade' }),
   equipment: equipmentEnum('equipment').notNull(),
-  weightClassKg: numeric('weight_class_kg').notNull(),
+  weightClassKg: text('weight_class_kg').notNull(),
   bodyweightKg: numeric('bodyweight_kg'),
   age: numeric('age'),
   ageClass: text('age_class'),

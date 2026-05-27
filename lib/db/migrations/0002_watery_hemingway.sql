@@ -1,0 +1,1 @@
+ALTER TABLE "entry" ALTER COLUMN "weight_class_kg" SET DATA TYPE text;

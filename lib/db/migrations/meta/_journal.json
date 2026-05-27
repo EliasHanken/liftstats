@@ -15,6 +15,13 @@
       "when": 1748352000000,
       "tag": "0001_pg_trgm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779892127058,
+      "tag": "0002_watery_hemingway",
+      "breakpoints": true
     }
   ]
 }

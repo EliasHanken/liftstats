@@ -50,11 +50,6 @@ export function transformRow(row: OplRawRow): TransformResult {
   // and dedup is handled at upsert time via the slug as natural key.
   const slug = slugify(row.Name) + (row.Sex === 'M' ? '' : '-' + row.Sex.toLowerCase());
 
-  // Strip trailing '+' from SHW classes (e.g. '120+' → '120') so the value is
-  // valid for the numeric DB column. The '+' is only meaningful as a display hint
-  // that this is the open-ended heaviest class, which is implicit from context.
-  const weightClassKg = row.WeightClassKg.replace(/\+$/, '');
-
   return {
     ok: true,
     row: {
@@ -80,7 +75,7 @@ export function transformRow(row: OplRawRow): TransformResult {
       },
       entry: {
         equipment,
-        weightClassKg,
+        weightClassKg: row.WeightClassKg,
         bodyweightKg: emptyToNull(row.BodyweightKg),
         age: emptyToNull(row.Age),
         ageClass: emptyToNull(row.AgeClass),
