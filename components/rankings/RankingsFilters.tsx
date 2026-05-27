@@ -1,6 +1,8 @@
 'use client';
 
+import { useTransition } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { Pending } from '@/components/Pending';
 
 type Option = { value: string; label: string };
 
@@ -41,12 +43,15 @@ export function RankingsFilters({ weightClasses, federations, countries }: Props
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   function update(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
     if (value === '') next.delete(key);
     else next.set(key, value);
-    router.push(`${pathname}?${next.toString()}`);
+    startTransition(() => {
+      router.push(`${pathname}?${next.toString()}`);
+    });
   }
 
   function val(key: string, fallback = ''): string {
@@ -57,7 +62,9 @@ export function RankingsFilters({ weightClasses, federations, countries }: Props
     'bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-cyan-500';
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+    <div className="relative">
+      <Pending pending={isPending} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
       <Select label="Sort by"      value={val('lift', 'gl')}  onChange={(v) => update('lift', v === 'gl' ? '' : v)}    options={LIFTS}     cls={selectCls} />
       <Select label="Sex"          value={val('sex')}         onChange={(v) => update('sex', v)}                       options={SEXES}     cls={selectCls} />
       <Select label="Equipment"    value={val('eq', 'Raw')}   onChange={(v) => update('eq', v === 'Raw' ? '' : v)}     options={EQUIPMENT} cls={selectCls} />
@@ -67,6 +74,7 @@ export function RankingsFilters({ weightClasses, federations, countries }: Props
       <Select label="Federation"   value={val('fed')}         onChange={(v) => update('fed', v)}                       options={[{ value: '', label: 'Any' }, ...federations.map((f) => ({ value: f, label: f }))]}                cls={selectCls} />
       <Select label="Country"      value={val('country')}     onChange={(v) => update('country', v)}                   options={[{ value: '', label: 'Any' }, ...countries.map((c) => ({ value: c, label: c }))]}                  cls={selectCls} />
       <Select label="Since year"   value={val('since')}       onChange={(v) => update('since', v)}                     options={[{ value: '', label: 'All time' }, ...[2020, 2018, 2015, 2010, 2000].map((y) => ({ value: String(y), label: `${y}+` }))]} cls={selectCls} />
+      </div>
     </div>
   );
 }
