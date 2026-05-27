@@ -75,11 +75,11 @@ describe('transformRow', () => {
     expect(r.row.entry.glPoints).toBeNull();
   });
 
-  it('preserves "+" in superheavy class strings (e.g. "120+")', () => {
+  it('strips trailing "+" from superheavy class strings (e.g. "120+" → "120") for numeric DB column', () => {
     const r = transformRow({ ...baseRow, WeightClassKg: '120+' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.row.entry.weightClassKg).toBe('120+');
+    expect(r.row.entry.weightClassKg).toBe('120');
   });
 
   it('skips rows missing Name', () => {
