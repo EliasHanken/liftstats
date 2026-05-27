@@ -68,4 +68,27 @@ describe('nations queries', () => {
     expect(s.rawLifters).toBe(0);
     expect(s.eqLifters).toBe(0);
   });
+
+  describe('getGlDistribution', () => {
+    it('returns histogram bins with the four (sex × equipment) count fields', async () => {
+      const { getGlDistribution } = await import('@/lib/db/queries/nations');
+      const d = await getGlDistribution(t.db, 'NOR', { activeSince: '2023-01-01' });
+      expect(d.bins.length).toBeGreaterThan(0);
+      expect(d.bins[0]).toHaveProperty('low');
+      expect(d.bins[0]).toHaveProperty('high');
+      expect(d.bins[0]).toHaveProperty('mRaw');
+      expect(d.bins[0]).toHaveProperty('mEq');
+      expect(d.bins[0]).toHaveProperty('fRaw');
+      expect(d.bins[0]).toHaveProperty('fEq');
+    });
+
+    it('total bin counts equal the number of qualifying NOR entries', async () => {
+      const { getGlDistribution } = await import('@/lib/db/queries/nations');
+      const d = await getGlDistribution(t.db, 'NOR', { activeSince: '2023-01-01' });
+      const totalCounted = d.bins.reduce(
+        (sum, b) => sum + b.mRaw + b.mEq + b.fRaw + b.fEq, 0,
+      );
+      expect(totalCounted).toBe(5);
+    });
+  });
 });
