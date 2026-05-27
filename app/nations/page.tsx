@@ -20,13 +20,14 @@ function defaultSince(): string {
 
 type Search = { searchParams: Promise<Record<string, string | undefined>> };
 
-async function loadCountryView(country: string, activeSince: string) {
+async function loadCountryView(country: string, activeSince: string, ageClass?: string) {
+  const opts = { activeSince, ageClass };
   const [stats, dist, top, heatmap, delta] = await Promise.all([
-    getCountryStats(db, country, { activeSince }),
-    getGlDistribution(db, country, { activeSince }),
-    getTopByDiscipline(db, country, { activeSince, limit: 10 }),
-    getWeightClassDistribution(db, country, { activeSince }),
-    getEqVsRawDeltaData(db, country, { activeSince }),
+    getCountryStats(db, country, opts),
+    getGlDistribution(db, country, opts),
+    getTopByDiscipline(db, country, { ...opts, limit: 10 }),
+    getWeightClassDistribution(db, country, opts),
+    getEqVsRawDeltaData(db, country, { ...opts, limit: 200 }),
   ]);
   return { country, stats, dist, top, heatmap, delta };
 }
@@ -47,13 +48,14 @@ export default async function NationsPage({ searchParams }: Search) {
   const sp = await searchParams;
   const country = sp.country ?? '';
   const country2 = sp.country2 ?? '';
+  const ageClass = sp.age && sp.age.length > 0 ? sp.age : undefined;
   const activeSince = (sp.since && /^\d{4}-\d{2}-\d{2}$/.test(sp.since)) ? sp.since : defaultSince();
 
   const countries = await getCountryList(db, { activeSince, limit: 60 });
 
-  const primary  = country  ? await loadCountryView(country,  activeSince) : null;
+  const primary  = country  ? await loadCountryView(country,  activeSince, ageClass) : null;
   const secondary = country2 && country2 !== country
-    ? await loadCountryView(country2, activeSince)
+    ? await loadCountryView(country2, activeSince, ageClass)
     : null;
 
   return (
