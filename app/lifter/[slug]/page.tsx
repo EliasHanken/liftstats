@@ -7,6 +7,7 @@ import {
   getLifterAggregates,
   getLifterRivals,
 } from '@/lib/db/queries/lifter';
+import { getAttemptSuccessForLifter } from '@/lib/db/queries/attempts';
 import { LifterHeader } from '@/components/lifter/Header';
 import { EqVsRawCard } from '@/components/lifter/EqVsRawCard';
 import { GlProgressionChart } from '@/components/lifter/GlProgressionChart';
@@ -27,13 +28,14 @@ const loadProfile = unstable_cache(
     const lifter = await getLifterBySlug(db, slug);
     if (!lifter) return null;
 
-    const [meets, agg, rivals] = await Promise.all([
+    const [meets, agg, rivals, attemptSuccess] = await Promise.all([
       getLifterMeets(db, lifter.id),
       getLifterAggregates(db, lifter.id),
       getLifterRivals(db, lifter.id, { limit: 5 }),
+      getAttemptSuccessForLifter(db, lifter.id),
     ]);
 
-    return { lifter, meets, agg, rivals };
+    return { lifter, meets, agg, rivals, attemptSuccess };
   },
   ['lifter-profile'],
   { revalidate: 86400, tags: ['lifters'] },
@@ -53,7 +55,7 @@ export default async function LifterPage({ params }: Params) {
   const { slug } = await params;
   const profile = await loadProfile(slug);
   if (!profile) notFound();
-  const { lifter, meets, agg, rivals } = profile;
+  const { lifter, meets, agg, rivals, attemptSuccess } = profile;
   const bestGl =
     agg.bestEqGl && (!agg.bestRawGl || Number(agg.bestEqGl) > Number(agg.bestRawGl))
       ? agg.bestEqGl
@@ -65,7 +67,7 @@ export default async function LifterPage({ params }: Params) {
         <LifterHeader lifter={lifter} agg={agg} />
         <EqVsRawCard agg={agg} meets={meets} />
         <GlProgressionChart meets={meets} />
-        <AttemptSuccessCard meets={meets} />
+        <AttemptSuccessCard meets={meets} success={attemptSuccess} />
         <MeetsTable meets={meets} />
         <RivalsPanel rivals={rivals} myBestGl={bestGl} />
       </div>
