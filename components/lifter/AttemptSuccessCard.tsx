@@ -44,19 +44,9 @@ export function AttemptSuccessCard({ meets, success }: Props) {
     return (
       <section className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
         <h2 className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Attempt success</h2>
-        <p className="text-sm text-zinc-400 mb-3">
-          Attempt-level data (1st/2nd/3rd success rates) is sourced from{' '}
-          <a className="text-cyan-400 hover:text-cyan-300" href="https://goodlift.info" target="_blank" rel="noopener">GoodLift</a>.
-          We currently cover:
-        </p>
-        <ul className="text-sm text-zinc-400 list-disc pl-5 mb-3 space-y-1">
-          <li>IPF World Championships (Open, Junior, Sub-Junior, Masters)</li>
-          <li>European Powerlifting Federation Championships</li>
-        </ul>
-        <p className="text-sm text-zinc-500">
-          This lifter hasn&apos;t competed at any of those — yet. Find lifters with attempt data via the{' '}
-          <a className="text-cyan-400 hover:text-cyan-300" href="/rankings?fed=IPF">IPF rankings</a>.
-          National federation meets (NSF, USAPL, etc.) aren&apos;t on GoodLift; covering those needs a separate data source we haven&apos;t built yet.
+        <p className="text-sm text-zinc-400">
+          This lifter doesn&apos;t have per-attempt records in our database — usually because their meets predate
+          2010 or the federation didn&apos;t publish attempt-level results.
         </p>
       </section>
     );
