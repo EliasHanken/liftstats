@@ -13,6 +13,18 @@ export type OplRawRow = {
   Best3SquatKg: string;
   Best3BenchKg: string;
   Best3DeadliftKg: string;
+  Squat1Kg: string;
+  Squat2Kg: string;
+  Squat3Kg: string;
+  Squat4Kg: string;     // 4th attempt for record breaks (rare)
+  Bench1Kg: string;
+  Bench2Kg: string;
+  Bench3Kg: string;
+  Bench4Kg: string;
+  Deadlift1Kg: string;
+  Deadlift2Kg: string;
+  Deadlift3Kg: string;
+  Deadlift4Kg: string;
   TotalKg: string;
   Place: string;                     // '1', '2', '3', 'DQ', 'DD', 'NS', etc.
   Dots: string;
@@ -59,7 +71,15 @@ export type NormalizedRow = {
     wilks: string | null;
     dots: string | null;
     tested: boolean;
+    attempts: ParsedAttempt[];
   };
+};
+
+export type ParsedAttempt = {
+  lift: 'SQ' | 'BP' | 'DL';
+  attemptNo: 1 | 2 | 3 | 4;
+  weightKg: number;
+  result: 'good' | 'no_lift';
 };
 
 // Rows we skip with a structured reason. Useful for diagnostics.
