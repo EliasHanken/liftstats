@@ -58,6 +58,7 @@ export type NormalizedRow = {
     glPoints: string | null;
     wilks: string | null;
     dots: string | null;
+    tested: boolean;
   };
 };
 

@@ -107,4 +107,14 @@ describe('transformRow', () => {
     if (!m.ok || !f.ok) throw new Error('expected both to succeed');
     expect(m.row.lifter.slug).not.toEqual(f.row.lifter.slug);
   });
+
+  it('maps Tested="Yes" to true and empty Tested to false', () => {
+    const tested = transformRow({ ...baseRow, Tested: 'Yes' });
+    const untested = transformRow({ ...baseRow, Tested: '' });
+    expect(tested.ok).toBe(true);
+    expect(untested.ok).toBe(true);
+    if (!tested.ok || !untested.ok) return;
+    expect(tested.row.entry.tested).toBe(true);
+    expect(untested.row.entry.tested).toBe(false);
+  });
 });

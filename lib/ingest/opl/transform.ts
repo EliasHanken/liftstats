@@ -88,6 +88,7 @@ export function transformRow(row: OplRawRow): TransformResult {
         glPoints: emptyToNull(row.Goodlift),
         wilks: emptyToNull(row.Wilks),
         dots: emptyToNull(row.Dots),
+        tested: row.Tested === 'Yes',
       },
     },
   };
