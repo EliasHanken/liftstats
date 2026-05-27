@@ -2,11 +2,11 @@ import { sql } from 'drizzle-orm';
 import { lifter, meet, entry } from '@/lib/db/schema';
 import type { NormalizedRow } from './types';
 
-type AnyDb = {
-  insert: (...args: unknown[]) => any;
-  select: (...args: unknown[]) => any;
-  execute?: (...args: unknown[]) => any;
-};
+// Drizzle's PgDatabase types are heavily generic; matching them precisely here
+// doesn't add safety because the schema is already typed at the call site
+// (lifter/meet/entry imports). `any` keeps the helpers usable with both
+// neon-http (prod) and pglite (tests) without fighting type variance.
+type AnyDb = any;
 
 export async function upsertLifters(
   db: AnyDb,
