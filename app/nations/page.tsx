@@ -40,8 +40,8 @@ type CountryView = {
   trimmed: boolean;
 };
 
-async function loadCountryView(country: string, activeSince: string, ageClass?: string): Promise<CountryView> {
-  const opts = { activeSince, ageClass };
+async function loadCountryView(country: string, activeSince: string, ageClass?: string, division?: string): Promise<CountryView> {
+  const opts = { activeSince, ageClass, division };
 
   // Cheap first: get the size. We need this anyway, and it tells us whether
   // to skip the heavy widgets.
@@ -84,13 +84,14 @@ export default async function NationsPage({ searchParams }: Search) {
   const country = sp.country ?? '';
   const country2 = sp.country2 ?? '';
   const ageClass = sp.age && sp.age.length > 0 ? sp.age : undefined;
+  const division = sp.division && sp.division.length > 0 ? sp.division : undefined;
   const activeSince = (sp.since && /^\d{4}-\d{2}-\d{2}$/.test(sp.since)) ? sp.since : defaultSince();
 
   const countries = await getCountryList(db, { activeSince, limit: 60 });
 
-  const primary  = country  ? await loadCountryView(country,  activeSince, ageClass) : null;
+  const primary  = country  ? await loadCountryView(country,  activeSince, ageClass, division) : null;
   const secondary = country2 && country2 !== country
-    ? await loadCountryView(country2, activeSince, ageClass)
+    ? await loadCountryView(country2, activeSince, ageClass, division)
     : null;
 
   return (

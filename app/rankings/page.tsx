@@ -26,6 +26,7 @@ function parseFilters(sp: Record<string, string | undefined>): LeaderboardFilter
   if (sp.age) out.ageClass = sp.age;
   if (sp.fed) out.federation = sp.fed;
   if (sp.country) out.country = sp.country;
+  if (sp.division) out.division = sp.division;
   if (sp.tested === 'true') out.tested = true;
   else if (sp.tested === 'false') out.tested = false;
   if (sp.since && /^\d{4}$/.test(sp.since)) out.sinceYear = parseInt(sp.since, 10);
