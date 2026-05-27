@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import { meet, entry } from '@/lib/db/schema';
 import type { MeetListingRow } from './types';
 
@@ -14,12 +14,47 @@ function oplFederationFor(goodliftFederation: string): string | null {
   return rule?.oplCode ?? null;
 }
 
+// Tokenize a meet name into a sorted set of meaningful words. This makes
+// matching robust to differences in word order and gender qualifiers:
+//   "World Open Equipped Powerlifting Championships"             (OPL)
+// →  "championship equipped open powerlifting world"
+//
+//   "IPF World Men's Equipped Open Powerlifting Championships"    (GoodLift)
+// →  "championship equipped open powerlifting world"   (same after dropping IPF + Men's)
+//
+// Words filtered out as noise:
+//   - federation prefixes: IPF, EPF
+//   - gender qualifiers: men, women, men's, women's, mens, womens
+//   - common connectors: of, the, and, &, /
+//   - the trailing 's' on championships is normalized to championship
 function normalizeMeetName(s: string): string {
+  const NOISE = new Set([
+    'ipf', 'epf',
+    'men', 'mens', 'women', 'womens',
+    'of', 'the', 'and',
+  ]);
   return s
     .toLowerCase()
+    // normalize curly apostrophes and similar to ASCII
+    .replace(/['']/g, "'")
+    // "men's" / "women's" → "men" / "women" so the set filter catches them
+    .replace(/\b(men|women)'s\b/g, '$1')
+    // championships → championship
+    .replace(/championships\b/g, 'championship')
+    // strip non-alphanumeric to spaces, then collapse
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
-    .replace(/championships?$/, 'championship');
+    .split(/\s+/)
+    .filter((tok) => tok.length > 0 && !NOISE.has(tok))
+    .sort()
+    .join(' ');
+}
+
+// Add/subtract `days` days from a YYYY-MM-DD string.
+function shiftDate(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 export async function findMeetByListing(
@@ -31,19 +66,36 @@ export async function findMeetByListing(
 
   const target = normalizeMeetName(listing.name);
 
-  const candidates = await db
+  // Pull candidates by federation, optionally narrowed to a ±3-day window
+  // around the listing date. The window is permissive because OPL and GoodLift
+  // sometimes disagree on which day of a multi-day meet to record.
+  const conds: any[] = [eq(meet.federation, oplFed)];
+  if (listing.date) {
+    conds.push(gte(meet.date, shiftDate(listing.date, -3)));
+    conds.push(lte(meet.date, shiftDate(listing.date, 3)));
+  }
+  const candidates: { id: number; name: string; date: string }[] = await db
     .select({ id: meet.id, name: meet.name, date: meet.date })
     .from(meet)
-    .where(and(
-      eq(meet.federation, oplFed),
-      listing.date ? eq(meet.date, listing.date) : sql`true`,
-    ));
+    .where(and(...conds));
 
-  const match = candidates.find(
-    (c: { name: string }) => normalizeMeetName(c.name) === target,
-  );
-  if (match) return { id: match.id };
-  return null;
+  // Among candidates within the date window, find ones whose normalized name
+  // matches. If multiple match, prefer the one with the smallest date delta.
+  const matches = candidates.filter((c) => normalizeMeetName(c.name) === target);
+  if (matches.length === 0) return null;
+  if (matches.length === 1) return { id: matches[0].id };
+
+  if (listing.date) {
+    const targetTime = new Date(listing.date + 'T00:00:00Z').getTime();
+    matches.sort((a, b) => {
+      const aDate = typeof a.date === 'string' ? a.date : (a.date as unknown as Date).toISOString().slice(0, 10);
+      const bDate = typeof b.date === 'string' ? b.date : (b.date as unknown as Date).toISOString().slice(0, 10);
+      const da = Math.abs(new Date(aDate + 'T00:00:00Z').getTime() - targetTime);
+      const db = Math.abs(new Date(bDate + 'T00:00:00Z').getTime() - targetTime);
+      return da - db;
+    });
+  }
+  return { id: matches[0].id };
 }
 
 function normalizeClass(s: string): string {

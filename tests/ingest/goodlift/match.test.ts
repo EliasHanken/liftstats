@@ -5,7 +5,7 @@ import { lifter, meet, entry } from '@/lib/db/schema';
 
 describe('GoodLift matchers', () => {
   let t: TestDb;
-  let meetId: number;
+  let worldClassicMeetId: number;
 
   beforeAll(async () => {
     t = await createTestDb();
@@ -17,10 +17,11 @@ describe('GoodLift matchers', () => {
       sourceMeetId: 'opl-cid-x',
       federation: 'IPF',
       date: '2024-09-09',
+      // OPL's name form: no IPF prefix, no gender.
       name: 'World Open Classic Powerlifting Championships',
       country: 'USA',
     }).returning();
-    meetId = m.id;
+    worldClassicMeetId = m.id;
     await t.db.insert(entry).values({
       lifterId: l.id, meetId: m.id, equipment: 'Raw', weightClassKg: '59',
       place: 2, totalKg: '637.5', glPoints: '105.65',
@@ -28,29 +29,51 @@ describe('GoodLift matchers', () => {
   });
   afterAll(async () => { await t.close(); });
 
-  it('findMeetByListing matches on federation + date + name (case-insensitive)', async () => {
+  it('matches when GoodLift name has IPF prefix and gender qualifier', async () => {
+    const found = await findMeetByListing(t.db, {
+      cid: 1046,
+      federation: 'International Powerlifting Federation',
+      name: "IPF World Men's Classic Open Powerlifting Championships",
+      date: '2024-09-09',
+      country: null, town: null,
+    });
+    expect(found?.id).toBe(worldClassicMeetId);
+  });
+
+  it('matches when word order differs', async () => {
+    const found = await findMeetByListing(t.db, {
+      cid: 1046,
+      federation: 'International Powerlifting Federation',
+      name: 'World Classic Open Powerlifting Championships',  // "Classic Open" not "Open Classic"
+      date: '2024-09-09',
+      country: null, town: null,
+    });
+    expect(found?.id).toBe(worldClassicMeetId);
+  });
+
+  it('matches within a 3-day date window', async () => {
     const found = await findMeetByListing(t.db, {
       cid: 1046,
       federation: 'International Powerlifting Federation',
       name: 'World Open Classic Powerlifting Championships',
-      date: '2024-09-09',
+      date: '2024-09-10',  // 1 day after OPL's record
       country: null, town: null,
     });
-    expect(found?.id).toBe(meetId);
+    expect(found?.id).toBe(worldClassicMeetId);
   });
 
-  it('findMeetByListing matches even when GoodLift name differs slightly', async () => {
+  it('returns null when names are unrelated', async () => {
     const found = await findMeetByListing(t.db, {
-      cid: 1046,
+      cid: 9999,
       federation: 'International Powerlifting Federation',
-      name: 'World Open CLASSIC Powerlifting Championships',
+      name: 'World Junior Equipped Powerlifting Championships',
       date: '2024-09-09',
       country: null, town: null,
     });
-    expect(found?.id).toBe(meetId);
+    expect(found).toBeNull();
   });
 
-  it('findMeetByListing returns null when no matching meet exists', async () => {
+  it('returns null when federation is not whitelisted', async () => {
     const found = await findMeetByListing(t.db, {
       cid: 9999,
       federation: 'Asian Powerlifting Federation',
@@ -62,7 +85,7 @@ describe('GoodLift matchers', () => {
   });
 
   it('findEntryForLifter matches by (meet_id, weight_class, place)', async () => {
-    const found = await findEntryForLifter(t.db, meetId, {
+    const found = await findEntryForLifter(t.db, worldClassicMeetId, {
       weightClassKg: '-59',
       place: 2,
     });
@@ -70,13 +93,13 @@ describe('GoodLift matchers', () => {
   });
 
   it('findEntryForLifter normalizes "-59" and "59" to match either', async () => {
-    const a = await findEntryForLifter(t.db, meetId, { weightClassKg: '-59', place: 2 });
-    const b = await findEntryForLifter(t.db, meetId, { weightClassKg: '59', place: 2 });
+    const a = await findEntryForLifter(t.db, worldClassicMeetId, { weightClassKg: '-59', place: 2 });
+    const b = await findEntryForLifter(t.db, worldClassicMeetId, { weightClassKg: '59', place: 2 });
     expect(a?.id).toBe(b?.id);
   });
 
   it('findEntryForLifter returns null when place does not match', async () => {
-    const found = await findEntryForLifter(t.db, meetId, {
+    const found = await findEntryForLifter(t.db, worldClassicMeetId, {
       weightClassKg: '-59',
       place: 99,
     });
