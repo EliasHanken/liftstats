@@ -40,7 +40,9 @@ export function GlProgressionChart({ meets }: Props) {
               contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: 6 }}
               labelStyle={{ color: '#a1a1aa' }}
               itemStyle={{ color: '#fafafa' }}
-              formatter={(value: number) => value?.toFixed(2)}
+              formatter={(value) =>
+                typeof value === 'number' ? value.toFixed(2) : String(value ?? '')
+              }
             />
             <Legend wrapperStyle={{ color: '#a1a1aa', fontSize: 11 }} />
             <Line type="monotone" dataKey="raw" name="Raw" stroke="#22d3ee" strokeWidth={2}
