@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "ingest:opl:local": "tsx scripts/ingest-opl-local.ts"
+    "ingest:opl:local": "tsx scripts/ingest-opl-local.ts",
+    "ingest:goodlift:local": "tsx scripts/ingest-goodlift-local.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
