@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { lifter, meet, entry } from '@/lib/db/schema';
-import type { NormalizedRow } from './types';
+import { lifter, meet, entry, attempt } from '@/lib/db/schema';
+import type { NormalizedRow, ParsedAttempt } from './types';
 
 // Drizzle's PgDatabase types are heavily generic; matching them precisely here
 // doesn't add safety because the schema is already typed at the call site
@@ -151,4 +151,35 @@ export async function upsertEntries(
   // Postgres trick: `xmax = 0` means a freshly inserted row; `xmax != 0` means it was updated.
   // pglite supports xmax too.
   return inserted.filter((r: any) => Number(r.xmax) === 0).length;
+}
+
+export type AttemptBatch = { entryId: number; attempts: ParsedAttempt[] };
+
+export async function upsertAttemptsFromOpl(
+  db: AnyDb,
+  batches: AttemptBatch[],
+): Promise<number> {
+  const values = batches.flatMap((b) =>
+    b.attempts.map((a) => ({
+      entryId: b.entryId,
+      lift: a.lift,
+      attemptNo: a.attemptNo,
+      weightKg: a.weightKg.toString(),
+      result: a.result,
+    })),
+  );
+  if (values.length === 0) return 0;
+
+  await db
+    .insert(attempt)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [attempt.entryId, attempt.lift, attempt.attemptNo],
+      set: {
+        weightKg: sql`excluded.weight_kg`,
+        result: sql`excluded.result`,
+      },
+    });
+
+  return values.length;
 }

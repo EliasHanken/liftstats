@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, type TestDb } from '@/lib/test/db';
 import { upsertLifters, upsertMeets, upsertEntries } from '@/lib/ingest/opl/upsert';
 import type { NormalizedRow } from '@/lib/ingest/opl/types';
-import { lifter, meet, entry } from '@/lib/db/schema';
+import { lifter, meet, entry, attempt } from '@/lib/db/schema';
 
 function makeRow(overrides: Partial<NormalizedRow['lifter']> = {}): NormalizedRow {
   const lifterPart = { name: 'John Haack', slug: 'john-haack', sex: 'M' as const, country: 'USA', ...overrides };
@@ -91,5 +91,39 @@ describe('upsert helpers', () => {
     await upsertEntries(t.db, rows, lifterIds, meetIds);
     const all = await t.db.select().from(entry);
     expect(all.some((e) => e.tested === true)).toBe(true);
+  });
+
+  it('upsertAttemptsFromOpl bulk-inserts attempts for many entries', async () => {
+    const { upsertAttemptsFromOpl } = await import('@/lib/ingest/opl/upsert');
+    const rows = [makeRow(), makeRow({ name: 'B', slug: 'b-m' })];
+    const lifterIds = await upsertLifters(t.db, rows);
+    const meetIds = await upsertMeets(t.db, rows);
+    await upsertEntries(t.db, rows, lifterIds, meetIds);
+
+    const allEntries = await t.db.select().from(entry);
+    expect(allEntries.length).toBeGreaterThanOrEqual(2);
+    const e1 = allEntries[allEntries.length - 2];
+    const e2 = allEntries[allEntries.length - 1];
+
+    const batch = [
+      {
+        entryId: e1.id,
+        attempts: [
+          { lift: 'SQ' as const, attemptNo: 1 as const, weightKg: 100, result: 'good' as const },
+          { lift: 'SQ' as const, attemptNo: 2 as const, weightKg: 110, result: 'no_lift' as const },
+        ],
+      },
+      {
+        entryId: e2.id,
+        attempts: [
+          { lift: 'DL' as const, attemptNo: 1 as const, weightKg: 250, result: 'good' as const },
+        ],
+      },
+    ];
+    const n = await upsertAttemptsFromOpl(t.db, batch);
+    expect(n).toBe(3);
+
+    const fromDb = await t.db.select().from(attempt);
+    expect(fromDb.length).toBeGreaterThanOrEqual(3);
   });
 });
