@@ -14,6 +14,12 @@ import { EqVsRawDeltaScatter } from '@/components/nations/EqVsRawDeltaScatter';
 
 export const dynamic = 'force-dynamic';
 
+// Countries with more than this many active lifters skip the most expensive
+// widgets (full GL distribution + dual-discipline scatter) because the
+// aggregations exhaust Railway's free-tier shared memory. USA (~95k) is the
+// only routine offender today; the limit gives us a safe margin.
+const HEAVY_QUERY_THRESHOLD = 30_000;
+
 function defaultSince(): string {
   const d = new Date();
   d.setUTCFullYear(d.getUTCFullYear() - 2);
@@ -22,28 +28,53 @@ function defaultSince(): string {
 
 type Search = { searchParams: Promise<Record<string, string | undefined>> };
 
-async function loadCountryView(country: string, activeSince: string, ageClass?: string) {
+type CountryView = {
+  country: string;
+  stats: Awaited<ReturnType<typeof getCountryStats>>;
+  top: Awaited<ReturnType<typeof getTopByDiscipline>>;
+  heatmap: Awaited<ReturnType<typeof getWeightClassDistribution>>;
+  attempt: Awaited<ReturnType<typeof getCountryAttemptSuccess>>;
+  // Heavy widgets are nullable — omitted for very large countries.
+  dist: Awaited<ReturnType<typeof getGlDistribution>> | null;
+  delta: Awaited<ReturnType<typeof getEqVsRawDeltaData>> | null;
+  trimmed: boolean;
+};
+
+async function loadCountryView(country: string, activeSince: string, ageClass?: string): Promise<CountryView> {
   const opts = { activeSince, ageClass };
-  const [stats, dist, top, heatmap, delta, attempt] = await Promise.all([
-    getCountryStats(db, country, opts),
-    getGlDistribution(db, country, opts),
+
+  // Cheap first: get the size. We need this anyway, and it tells us whether
+  // to skip the heavy widgets.
+  const stats = await getCountryStats(db, country, opts);
+  const heavy = stats.totalLifters > HEAVY_QUERY_THRESHOLD;
+
+  const [top, heatmap, attempt, dist, delta] = await Promise.all([
     getTopByDiscipline(db, country, { ...opts, limit: 10 }),
     getWeightClassDistribution(db, country, opts),
-    getEqVsRawDeltaData(db, country, { ...opts, limit: 200 }),
     getCountryAttemptSuccess(db, country),
+    heavy ? Promise.resolve(null) : getGlDistribution(db, country, opts),
+    heavy ? Promise.resolve(null) : getEqVsRawDeltaData(db, country, { ...opts, limit: 200 }),
   ]);
-  return { country, stats, dist, top, heatmap, delta, attempt };
+
+  return { country, stats, top, heatmap, attempt, dist, delta, trimmed: heavy };
 }
 
-function CountrySection({ data }: { data: Awaited<ReturnType<typeof loadCountryView>> }) {
+function CountrySection({ data }: { data: CountryView }) {
   return (
     <>
       <PopulationSummary country={data.country} stats={data.stats} />
-      <GlDistributionChart bins={data.dist.bins} />
+      {data.trimmed && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-8 text-sm text-zinc-400">
+          <strong className="text-zinc-200">{data.country}</strong> has {data.stats.totalLifters.toLocaleString()} active lifters —
+          GL distribution and eq-vs-raw scatter are omitted to keep the page fast. Drill into smaller scopes (a federation or
+          age class) for the full view.
+        </div>
+      )}
+      {data.dist && <GlDistributionChart bins={data.dist.bins} />}
       <CountryAttemptCard data={data.attempt} />
       <TopByDiscipline data={data.top} />
       <WeightClassHeatmap cells={data.heatmap} />
-      <EqVsRawDeltaScatter rows={data.delta} />
+      {data.delta && <EqVsRawDeltaScatter rows={data.delta} />}
     </>
   );
 }

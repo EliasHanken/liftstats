@@ -52,12 +52,11 @@ export function AttemptSuccessCard({ meets, success }: Props) {
         <ul className="text-sm text-zinc-400 list-disc pl-5 mb-3 space-y-1">
           <li>IPF World Championships (Open, Junior, Sub-Junior, Masters)</li>
           <li>European Powerlifting Federation Championships</li>
-          <li>NSF (Norwegian) federation meets</li>
         </ul>
         <p className="text-sm text-zinc-500">
           This lifter hasn&apos;t competed at any of those — yet. Find lifters with attempt data via the{' '}
-          <a className="text-cyan-400 hover:text-cyan-300" href="/rankings?fed=IPF">IPF rankings</a> or{' '}
-          <a className="text-cyan-400 hover:text-cyan-300" href="/rankings?fed=NSF">NSF rankings</a>.
+          <a className="text-cyan-400 hover:text-cyan-300" href="/rankings?fed=IPF">IPF rankings</a>.
+          National federation meets (NSF, USAPL, etc.) aren&apos;t on GoodLift; covering those needs a separate data source we haven&apos;t built yet.
         </p>
       </section>
     );
