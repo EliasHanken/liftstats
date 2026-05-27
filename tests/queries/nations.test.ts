@@ -1,0 +1,71 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, type TestDb } from '@/lib/test/db';
+import { getCountryList, getCountryStats } from '@/lib/db/queries/nations';
+import { lifter, meet, entry } from '@/lib/db/schema';
+
+describe('nations queries', () => {
+  let t: TestDb;
+
+  beforeAll(async () => {
+    t = await createTestDb();
+    const ls = await t.db.insert(lifter).values([
+      { slug: 'n1-m', name: 'N1', sex: 'M', country: 'NOR' },
+      { slug: 'n2-m', name: 'N2', sex: 'M', country: 'NOR' },
+      { slug: 'n3-m', name: 'N3', sex: 'M', country: 'NOR' },
+      { slug: 'n4-f', name: 'N4', sex: 'F', country: 'NOR' },
+      { slug: 'u1-m', name: 'U1', sex: 'M', country: 'USA' },
+      { slug: 'u2-f', name: 'U2', sex: 'F', country: 'USA' },
+      { slug: 'u3-m', name: 'U3', sex: 'M', country: 'USA' },
+    ]).returning();
+
+    const [recent, old] = await t.db.insert(meet).values([
+      { source: 'opl', sourceMeetId: 'recent', federation: 'IPF', date: '2025-06-01', name: 'Recent' },
+      { source: 'opl', sourceMeetId: 'old',    federation: 'IPF', date: '2018-01-01', name: 'Old' },
+    ]).returning();
+
+    await t.db.insert(entry).values([
+      // Norwegians — all active
+      { lifterId: ls[0].id, meetId: recent.id, equipment: 'Raw',    weightClassKg: '83',  glPoints: '100' },
+      { lifterId: ls[1].id, meetId: recent.id, equipment: 'Single', weightClassKg: '83',  glPoints: '110' },
+      { lifterId: ls[2].id, meetId: recent.id, equipment: 'Raw',    weightClassKg: '83',  glPoints: '105' },
+      // N2 also has Raw (competes in both)
+      { lifterId: ls[1].id, meetId: recent.id, equipment: 'Raw',    weightClassKg: '83',  glPoints: '95' },
+      { lifterId: ls[3].id, meetId: recent.id, equipment: 'Raw',    weightClassKg: '63',  glPoints: '120' },
+      // USA U1 + U2 active, U3 inactive
+      { lifterId: ls[4].id, meetId: recent.id, equipment: 'Raw',    weightClassKg: '93',  glPoints: '108' },
+      { lifterId: ls[5].id, meetId: recent.id, equipment: 'Raw',    weightClassKg: '76',  glPoints: '115' },
+      { lifterId: ls[6].id, meetId: old.id,    equipment: 'Raw',    weightClassKg: '93',  glPoints: '90' },
+    ]);
+  });
+  afterAll(async () => { await t.close(); });
+
+  it('getCountryList returns countries ordered by active-lifter count', async () => {
+    const r = await getCountryList(t.db, { activeSince: '2023-01-01', limit: 5 });
+    expect(r.length).toBeGreaterThan(0);
+    expect(r[0].country).toBe('NOR');
+    expect(r[0].lifters).toBe(4);
+    const usa = r.find((c) => c.country === 'USA');
+    expect(usa?.lifters).toBe(2);
+  });
+
+  it('getCountryStats reports totals correctly', async () => {
+    const s = await getCountryStats(t.db, 'NOR', { activeSince: '2023-01-01' });
+    expect(s.totalLifters).toBe(4);
+    expect(s.rawLifters).toBe(4);  // N1, N2, N3, N4
+  });
+
+  it('getCountryStats: eq + both correct', async () => {
+    const s = await getCountryStats(t.db, 'NOR', { activeSince: '2023-01-01' });
+    expect(s.eqLifters).toBe(1);   // N2 only
+    expect(s.bothLifters).toBe(1); // N2 only
+    expect(s.men).toBe(3);
+    expect(s.women).toBe(1);
+  });
+
+  it('getCountryStats returns zeroes for a country with no active lifters', async () => {
+    const s = await getCountryStats(t.db, 'JPN', { activeSince: '2023-01-01' });
+    expect(s.totalLifters).toBe(0);
+    expect(s.rawLifters).toBe(0);
+    expect(s.eqLifters).toBe(0);
+  });
+});
