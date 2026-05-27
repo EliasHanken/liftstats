@@ -38,10 +38,8 @@ async function loadDropdownData() {
     FROM entry WHERE weight_class_kg IS NOT NULL
     GROUP BY weight_class_kg ORDER BY n DESC LIMIT 20
   `);
-  const feds = await db.execute(sql`
-    SELECT federation AS f, COUNT(*) AS n
-    FROM meet GROUP BY federation ORDER BY n DESC LIMIT 30
-  `);
+  const { getFederationsForFilter } = await import('@/lib/db/queries/federations');
+  const federations = await getFederationsForFilter(db, { limit: 30 });
   const ctry = await db.execute(sql`
     SELECT country AS c, COUNT(*) AS n
     FROM lifter WHERE country IS NOT NULL
@@ -49,7 +47,7 @@ async function loadDropdownData() {
   `);
   return {
     weightClasses: ((wc as any).rows ?? wc).map((r: any) => r.w).filter(Boolean),
-    federations:   ((feds as any).rows ?? feds).map((r: any) => r.f).filter(Boolean),
+    federations,
     countries:     ((ctry as any).rows ?? ctry).map((r: any) => r.c).filter(Boolean),
   };
 }
