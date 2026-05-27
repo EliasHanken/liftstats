@@ -3,9 +3,11 @@ import {
   getCountryList, getCountryStats, getGlDistribution,
   getTopByDiscipline, getWeightClassDistribution, getEqVsRawDeltaData,
 } from '@/lib/db/queries/nations';
+import { getCountryAttemptSuccess } from '@/lib/db/queries/attempts';
 import { CountryPicker } from '@/components/nations/CountryPicker';
 import { PopulationSummary } from '@/components/nations/PopulationSummary';
 import { GlDistributionChart } from '@/components/nations/GlDistributionChart';
+import { CountryAttemptCard } from '@/components/nations/CountryAttemptCard';
 import { TopByDiscipline } from '@/components/nations/TopByDiscipline';
 import { WeightClassHeatmap } from '@/components/nations/WeightClassHeatmap';
 import { EqVsRawDeltaScatter } from '@/components/nations/EqVsRawDeltaScatter';
@@ -22,14 +24,15 @@ type Search = { searchParams: Promise<Record<string, string | undefined>> };
 
 async function loadCountryView(country: string, activeSince: string, ageClass?: string) {
   const opts = { activeSince, ageClass };
-  const [stats, dist, top, heatmap, delta] = await Promise.all([
+  const [stats, dist, top, heatmap, delta, attempt] = await Promise.all([
     getCountryStats(db, country, opts),
     getGlDistribution(db, country, opts),
     getTopByDiscipline(db, country, { ...opts, limit: 10 }),
     getWeightClassDistribution(db, country, opts),
     getEqVsRawDeltaData(db, country, { ...opts, limit: 200 }),
+    getCountryAttemptSuccess(db, country),
   ]);
-  return { country, stats, dist, top, heatmap, delta };
+  return { country, stats, dist, top, heatmap, delta, attempt };
 }
 
 function CountrySection({ data }: { data: Awaited<ReturnType<typeof loadCountryView>> }) {
@@ -37,6 +40,7 @@ function CountrySection({ data }: { data: Awaited<ReturnType<typeof loadCountryV
     <>
       <PopulationSummary country={data.country} stats={data.stats} />
       <GlDistributionChart bins={data.dist.bins} />
+      <CountryAttemptCard data={data.attempt} />
       <TopByDiscipline data={data.top} />
       <WeightClassHeatmap cells={data.heatmap} />
       <EqVsRawDeltaScatter rows={data.delta} />

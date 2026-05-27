@@ -59,3 +59,47 @@ export async function getAttemptSuccessForLifter(
   }
   return out;
 }
+
+export type LiftSuccess = { good: number; total: number };
+export type CountryAttemptSuccess = {
+  lifters: number;
+  SQ: LiftSuccess;
+  BP: LiftSuccess;
+  DL: LiftSuccess;
+};
+
+export async function getCountryAttemptSuccess(
+  db: AnyDb,
+  country: string,
+): Promise<CountryAttemptSuccess> {
+  const result = await db.execute(sql`
+    WITH country_attempts AS (
+      SELECT a.lift, a.result, e.lifter_id
+      FROM attempt a
+      JOIN entry  e ON e.id = a.entry_id
+      JOIN lifter l ON l.id = e.lifter_id
+      WHERE l.country = ${country}
+    )
+    SELECT
+      lift,
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE result = 'good')::int AS good,
+      (SELECT COUNT(DISTINCT lifter_id)::int FROM country_attempts) AS lifters
+    FROM country_attempts
+    GROUP BY lift
+  `);
+  const rows = (result as any).rows ?? result;
+  const out: CountryAttemptSuccess = {
+    lifters: 0,
+    SQ: { good: 0, total: 0 },
+    BP: { good: 0, total: 0 },
+    DL: { good: 0, total: 0 },
+  };
+  for (const row of rows) {
+    out.lifters = row.lifters;
+    const lift = out[row.lift as 'SQ' | 'BP' | 'DL'];
+    lift.good = row.good;
+    lift.total = row.total;
+  }
+  return out;
+}
