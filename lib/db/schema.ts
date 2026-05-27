@@ -63,6 +63,7 @@ export const entry = pgTable('entry', {
   wilks: numeric('wilks'),
   dots: numeric('dots'),
   flightSize: integer('flight_size'),
+  tested: boolean('tested'),
 }, (t) => [
   uniqueIndex('entry_lifter_meet_eq_class_unique')
     .on(t.lifterId, t.meetId, t.equipment, t.weightClassKg),
