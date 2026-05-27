@@ -155,4 +155,24 @@ describe('nations queries', () => {
     expect(all.totalLifters).toBeGreaterThan(jr.totalLifters);
     expect(jr.totalLifters).toBe(1);
   });
+
+  it('nation queries accept a division filter', async () => {
+    const { eq } = await import('drizzle-orm');
+    const { getCountryStats } = await import('@/lib/db/queries/nations');
+    const [n1] = await t.db.select().from(lifter).where(eq(lifter.slug, 'n1-m'));
+    const [m] = await t.db.insert(meet).values({
+      source: 'opl', sourceMeetId: 'div-meet', federation: 'IPF',
+      date: '2025-07-01', name: 'Div Meet',
+    }).returning();
+    // Only n1 gets an 'Open' division entry; n2–n4 have no division tag.
+    await t.db.insert(entry).values({
+      lifterId: n1.id, meetId: m.id, equipment: 'Raw', weightClassKg: '83',
+      glPoints: '99', division: 'Open',
+    });
+    const all  = await getCountryStats(t.db, 'NOR', { activeSince: '2023-01-01' });
+    const opn  = await getCountryStats(t.db, 'NOR', { activeSince: '2023-01-01', division: 'Open' });
+    // With division='Open' filter, only n1 qualifies; n2–n4 have no 'Open' entry.
+    expect(opn.totalLifters).toBeLessThan(all.totalLifters);
+    expect(opn.totalLifters).toBeGreaterThanOrEqual(1);
+  });
 });
