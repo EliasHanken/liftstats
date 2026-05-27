@@ -6,13 +6,24 @@ import { Pending } from '@/components/Pending';
 
 type Props = { countries: { country: string; lifters: number }[] };
 
+const DIVISIONS = [
+  { value: '',            label: 'Any division' },
+  { value: 'Open',        label: 'Open' },
+  { value: 'Sub-Juniors', label: 'Sub-Juniors' },
+  { value: 'Juniors',     label: 'Juniors' },
+  { value: 'Masters 1',   label: 'Masters 1' },
+  { value: 'Masters 2',   label: 'Masters 2' },
+  { value: 'Masters 3',   label: 'Masters 3' },
+  { value: 'Masters 4',   label: 'Masters 4' },
+];
+
 export function CountryPicker({ countries }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  function update(key: 'country' | 'country2' | 'age', value: string) {
+  function update(key: 'country' | 'country2' | 'age' | 'division', value: string) {
     const next = new URLSearchParams(params.toString());
     if (value === '') next.delete(key);
     else next.set(key, value);
@@ -34,7 +45,7 @@ export function CountryPicker({ countries }: Props) {
   return (
     <div className="relative">
       <Pending pending={isPending} />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8">
         <label className="flex flex-col gap-1">
           <span className="text-[10px] uppercase tracking-widest text-zinc-500">Country</span>
           <select className={selectCls} value={primary} onChange={(e) => update('country', e.target.value)}>
@@ -69,6 +80,16 @@ export function CountryPicker({ countries }: Props) {
             <option value="Masters 2">Masters 2</option>
             <option value="Masters 3">Masters 3</option>
             <option value="Masters 4">Masters 4</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-widest text-zinc-500">Division</span>
+          <select
+            className={selectCls}
+            value={params.get('division') ?? ''}
+            onChange={(e) => update('division', e.target.value)}
+          >
+            {DIVISIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </label>
       </div>

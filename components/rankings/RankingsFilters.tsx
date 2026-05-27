@@ -38,6 +38,16 @@ const TESTED: Option[] = [
   { value: 'true',  label: 'Drug-tested only' },
   { value: 'false', label: 'Untested' },
 ];
+const DIVISIONS: Option[] = [
+  { value: '',            label: 'Any division' },
+  { value: 'Open',        label: 'Open' },
+  { value: 'Sub-Juniors', label: 'Sub-Juniors' },
+  { value: 'Juniors',     label: 'Juniors' },
+  { value: 'Masters 1',   label: 'Masters 1' },
+  { value: 'Masters 2',   label: 'Masters 2' },
+  { value: 'Masters 3',   label: 'Masters 3' },
+  { value: 'Masters 4',   label: 'Masters 4' },
+];
 
 export function RankingsFilters({ weightClasses, federations, countries }: Props) {
   const router = useRouter();
@@ -74,6 +84,7 @@ export function RankingsFilters({ weightClasses, federations, countries }: Props
       <Select label="Federation"   value={val('fed')}         onChange={(v) => update('fed', v)}                       options={[{ value: '', label: 'Any' }, ...federations.map((f) => ({ value: f, label: f }))]}                cls={selectCls} />
       <Select label="Country"      value={val('country')}     onChange={(v) => update('country', v)}                   options={[{ value: '', label: 'Any' }, ...countries.map((c) => ({ value: c, label: c }))]}                  cls={selectCls} />
       <Select label="Since year"   value={val('since')}       onChange={(v) => update('since', v)}                     options={[{ value: '', label: 'All time' }, ...[2020, 2018, 2015, 2010, 2000].map((y) => ({ value: String(y), label: `${y}+` }))]} cls={selectCls} />
+      <Select label="Division"     value={val('division')}    onChange={(v) => update('division', v)}                  options={DIVISIONS}  cls={selectCls} />
       </div>
     </div>
   );
