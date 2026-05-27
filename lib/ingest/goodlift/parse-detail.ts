@@ -104,12 +104,12 @@ function parseLifterRow(
   const totalText = tr.querySelector('.lifter_total')?.text ?? '';
   const totalKg = numOrNull(totalText);
 
-  // Place: GoodLift shows per-lift place columns. The FIRST .place cell
-  // (after squats) holds the competition standing after the squat round,
-  // which corresponds to the overall competition rank in this layout.
-  const placeNodes = tr.querySelectorAll('.place p');
-  const firstPlaceText = placeNodes[0]?.text?.trim() ?? '';
-  const place = /^\d+$/.test(firstPlaceText) ? parseInt(firstPlaceText, 10) : null;
+  // Overall place is implicit in lifter_number. The table is sorted by Total
+  // descending, so lifter #1 won the class. The per-lift .place cells contain
+  // squat-rank / bench-rank / deadlift-rank respectively — NOT overall place.
+  // DQ'd lifters have "−" (minus sign) in lifter_number and are pushed to the
+  // bottom; we return null for them.
+  const place = position;
 
   return {
     position,

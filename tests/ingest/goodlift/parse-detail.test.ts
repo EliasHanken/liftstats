@@ -59,6 +59,6 @@ describe('parseCompetitionDetail', () => {
     const lifters = parseCompetitionDetail(html, { equipmentHint: 'Raw' });
     const ivan = lifters.find((l) => l.name.includes('Campano Diaz'));
     expect(ivan!.totalKg).toBeCloseTo(637.5, 1);
-    expect(ivan!.place).toBe(2);
+    expect(ivan!.place).toBe(1);
   });
 });
