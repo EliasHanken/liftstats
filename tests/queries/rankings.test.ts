@@ -94,4 +94,37 @@ describe('getLeaderboard', () => {
     const a = r.find((x) => x.slug === 'a-m')!;
     expect(Number(a.glPoints)).toBe(130);
   });
+
+  it('filters by division', async () => {
+    const { lifter, meet, entry } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const [a] = await t.db.select().from(lifter).where(eq(lifter.slug, 'a-m'));
+    const [m] = await t.db.insert(meet).values({
+      source: 'opl', sourceMeetId: 'lb-jr', federation: 'IPF',
+      date: '2024-12-01', name: 'JrMeet',
+    }).returning();
+    await t.db.insert(entry).values({
+      lifterId: a.id, meetId: m.id, equipment: 'Raw', weightClassKg: '93',
+      totalKg: '850', glPoints: '120.0', tested: true, division: 'Open',
+    });
+    await t.db.insert(entry).values({
+      lifterId: a.id, meetId: m.id, equipment: 'Single', weightClassKg: '93',
+      totalKg: '750', glPoints: '105.0', tested: true, division: 'Junior',
+    });
+    const all = await getLeaderboard(t.db, { limit: 50 });
+    // With division='Open', only Open-tagged entries should appear.
+    // Lifters b-f, c-m, d-m have no division tag (NULL), so they should be excluded.
+    const opn = await getLeaderboard(t.db, { division: 'Open', limit: 50 });
+    // a-m has an Open entry so should appear
+    expect(opn.some((r) => r.slug === 'a-m')).toBe(true);
+    // b-f, c-m, d-m have no division tag so should NOT appear under 'Open'
+    expect(opn.some((r) => r.slug === 'b-f')).toBe(false);
+    expect(opn.some((r) => r.slug === 'c-m')).toBe(false);
+    // Junior filter: a-m's Single entry is tagged Junior
+    const jr  = await getLeaderboard(t.db, { division: 'Junior', limit: 50 });
+    expect(jr.some((r) => r.slug === 'a-m')).toBe(true);
+    // Junior filter only returns the one a-m entry tagged Junior,
+    // while the default returns a-m alongside everyone else.
+    expect(jr.length).toBeLessThanOrEqual(all.length);
+  });
 });

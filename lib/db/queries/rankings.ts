@@ -16,6 +16,7 @@ export type LeaderboardFilters = {
   country?: string;
   tested?: boolean;
   sinceYear?: number;
+  division?: string;
   limit?: number;
 };
 
@@ -72,6 +73,7 @@ export async function getLeaderboard(
   if (filters.country)         where.push(sql`l.country = ${filters.country}`);
   if (filters.tested !== undefined) where.push(sql`e.tested = ${filters.tested}`);
   if (filters.sinceYear)       where.push(sql`m.date >= ${`${filters.sinceYear}-01-01`}`);
+  if (filters.division)        where.push(sql`e.division = ${filters.division}`);
 
   const whereSql = sql.join(where, sql` AND `);
 
