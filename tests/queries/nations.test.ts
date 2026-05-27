@@ -69,6 +69,27 @@ describe('nations queries', () => {
     expect(s.eqLifters).toBe(0);
   });
 
+  describe('getWeightClassDistribution', () => {
+    it('returns a count per (sex, equipment, weight_class) cell', async () => {
+      const { getWeightClassDistribution } = await import('@/lib/db/queries/nations');
+      const cells = await getWeightClassDistribution(t.db, 'NOR', { activeSince: '2023-01-01' });
+      expect(cells.length).toBeGreaterThan(0);
+      const m83Raw = cells.find((c) => c.sex === 'M' && c.equipment === 'Raw' && c.weightClassKg === '83');
+      expect(m83Raw?.lifters).toBe(3);
+    });
+  });
+
+  describe('getEqVsRawDeltaData', () => {
+    it('returns one row per lifter who has both raw and equipped totals', async () => {
+      const { getEqVsRawDeltaData } = await import('@/lib/db/queries/nations');
+      const r = await getEqVsRawDeltaData(t.db, 'NOR', { activeSince: '2023-01-01' });
+      expect(r.length).toBe(1);
+      expect(r[0].slug).toBe('n2-m');
+      expect(Number(r[0].rawGl)).toBe(95);
+      expect(Number(r[0].eqGl)).toBe(110);
+    });
+  });
+
   describe('getTopByDiscipline', () => {
     it('returns top raw and top eq lifters per country, one row per lifter', async () => {
       const { getTopByDiscipline } = await import('@/lib/db/queries/nations');
