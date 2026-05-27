@@ -36,7 +36,7 @@ const loadProfile = unstable_cache(
     return { lifter, meets, agg, rivals };
   },
   ['lifter-profile'],
-  { revalidate: 86400, tags: ['lifter'] },
+  { revalidate: 86400, tags: ['lifters'] },
 );
 
 export async function generateMetadata({ params }: Params) {
