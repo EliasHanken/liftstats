@@ -13,6 +13,11 @@ describe('searchLifters', () => {
       { slug: 'jessica-buettner-f', name: 'Jessica Buettner', sex: 'F', country: 'CAN' },
       { slug: 'sonita-muluh-f', name: 'Sonita Muluh', sex: 'F', country: 'GBR' },
       { slug: 'taylor-atwood', name: 'Taylor Atwood', sex: 'M', country: 'USA' },
+      // Decoys: short single-word names that previously outranked John Haack
+      // when the matcher used only word_similarity (because the "Jo" prefix of
+      // "John" matched the full word "Jo" in these names).
+      { slug: 'ally-jo-f', name: 'Ally Jo', sex: 'F', country: 'USA' },
+      { slug: 'amy-jo-hardage-f', name: 'Amy Jo Hardage', sex: 'F', country: 'USA' },
     ]);
   });
   afterAll(async () => { await t.close(); });
@@ -31,6 +36,11 @@ describe('searchLifters', () => {
   it('tolerates minor typos', async () => {
     const results = await searchLifters(t.db, { q: 'olivers', limit: 5 });
     expect(results.some((r) => r.slug === 'jesus-olivares')).toBe(true);
+  });
+
+  it('multi-word typo "John Hack" ranks John Haack above unrelated "*Jo*" names', async () => {
+    const results = await searchLifters(t.db, { q: 'John Hack', limit: 5 });
+    expect(results[0].slug).toBe('john-haack');
   });
 
   it('returns empty array for nonsense query', async () => {
