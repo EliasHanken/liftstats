@@ -37,7 +37,7 @@ export async function runGoodliftIngest(deps: GoodliftDeps): Promise<GoodliftRun
 
   for (const year of years) {
     const listingHtml = await fetcher.fetchCompetitionsListing(year);
-    const meets = parseCompetitionListing(listingHtml).filter(isWhitelisted);
+    const meets = parseCompetitionListing(listingHtml, year).filter(isWhitelisted);
 
     for (const listing of meets) {
       meetsConsidered++;

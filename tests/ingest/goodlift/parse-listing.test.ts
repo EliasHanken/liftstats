@@ -13,12 +13,12 @@ describe('parseCompetitionListing', () => {
   });
 
   it('returns a non-empty array of meets', () => {
-    const meets = parseCompetitionListing(html);
+    const meets = parseCompetitionListing(html, 2024);
     expect(meets.length).toBeGreaterThan(10);
   });
 
   it('every meet has a positive cid and a non-empty name', () => {
-    const meets = parseCompetitionListing(html);
+    const meets = parseCompetitionListing(html, 2024);
     for (const m of meets) {
       expect(m.cid).toBeGreaterThan(0);
       expect(m.name.length).toBeGreaterThan(0);
@@ -26,14 +26,14 @@ describe('parseCompetitionListing', () => {
   });
 
   it('parses an EPF meet correctly', () => {
-    const meets = parseCompetitionListing(html);
+    const meets = parseCompetitionListing(html, 2024);
     const epf = meets.find((m) => m.federation.includes('European Powerlifting'));
     expect(epf).toBeDefined();
     expect(epf!.name.toLowerCase()).toContain('european');
   });
 
   it('cid values are unique across the listing', () => {
-    const meets = parseCompetitionListing(html);
+    const meets = parseCompetitionListing(html, 2024);
     const cids = new Set(meets.map((m) => m.cid));
     expect(cids.size).toBe(meets.length);
   });

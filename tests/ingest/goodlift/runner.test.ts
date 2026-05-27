@@ -27,7 +27,7 @@ describe('runGoodliftIngest', () => {
     // Seed a lifter and an OPL meet that match cid=947 in the listing fixture.
     // The listing fixture (competitions-2024.html) contains cid=947:
     //   name:  "IPF World Men's Classic Open Powerlifting Championships"
-    //   date:  "2026-06-15"  (the fixture year extracts as 2026)
+    //   date:  "2024-06-15"  (year from ?year=2024 URL param, correctly passed through)
     //   fed:   "International Powerlifting Federation" → IPF
     // The detail fixture (onecompetition-dtl-1046.html) contains Ivan Campano Diaz
     // at -59kg, place 1 with a total of 637.5 kg.
@@ -38,8 +38,8 @@ describe('runGoodliftIngest', () => {
       source: 'opl',
       sourceMeetId: 'opl-cid-947',
       federation: 'IPF',
-      date: '2026-06-15',
-      name: "IPF World Men's Classic Open Powerlifting Championships",
+      date: '2024-06-15',
+      name: 'World Classic Powerlifting Championships',
       country: 'Lithuania',
     }).returning();
     await t.db.insert(entry).values({

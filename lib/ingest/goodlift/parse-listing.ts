@@ -1,41 +1,37 @@
 import { parse } from 'node-html-parser';
 import type { MeetListingRow } from './types';
 
-// Month abbreviation to two-digit month map
-const MONTH_MAP: Record<string, string> = {
-  Jan: '01', Feb: '02', Mar: '03', Apr: '04',
-  May: '05', Jun: '06', Jul: '07', Aug: '08',
-  Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-};
-
-// Extract year from the HTML page title or year selection links, defaulting to
-// current year if not found. This lets date strings like "12 Feb - 18 Feb" be
-// converted to ISO dates relative to the listing's year.
-function extractYear(html: string): string {
-  const m = html.match(/competitions\.php\?year=(\d{4})['"]\s*class=['"]current_mitem/);
-  if (m) return m[1];
-  // fallback: look for any year=YYYY currently selected
-  const m2 = html.match(/competitions\.php\?year=(\d{4})/);
-  if (m2) return m2[1];
-  return String(new Date().getFullYear());
-}
-
 // Parse a date string like "12 Feb - 18 Feb" to an ISO start date, given the
-// listing year. Returns null if the format is unrecognised.
-function parseDateRange(raw: string, year: string): string | null {
-  // "DD Mon - DD Mon" or "DD Mon - DD Mon" with non-breaking spaces
-  const normalised = raw.replace(/ /g, ' ').trim();
-  const m = normalised.match(/^(\d{1,2})\s+([A-Za-z]{3})/);
+// listing year (passed explicitly from the caller). Returns null if the format
+// is unrecognised.
+// Expected formats in listing cells (no year in the cell):
+//   "15 Jun - 23 Jun"   (range — take start)
+//   "25 Jan"            (single day)
+//   "12 Dec - 04 Jan"   (year-crossing — take start)
+function parseListingDate(cellText: string, year: number): string | null {
+  const trimmed = cellText.trim();
+  const m = trimmed.match(/^(\d{1,2})\s+([A-Za-z]{3,9})/);
   if (!m) return null;
-  const day = m[1].padStart(2, '0');
-  const mon = MONTH_MAP[m[2]];
-  if (!mon) return null;
-  return `${year}-${mon}-${day}`;
+  const day = parseInt(m[1], 10);
+  const monthName = m[2].toLowerCase().slice(0, 3);
+  const months: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+  };
+  const month = months[monthName];
+  if (!month) return null;
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
 }
 
 /**
  * Parse the GoodLift competitions listing page and return one row per unique
  * competition (identified by cid).
+ *
+ * The `year` parameter must be supplied by the caller (it is the year used in
+ * the URL query string, e.g. ?year=2024). The listing HTML cells contain dates
+ * like "15 Jun - 23 Jun" with no year embedded.
  *
  * Each row in the listing looks like:
  *   <tr>
@@ -46,9 +42,8 @@ function parseDateRange(raw: string, year: string): string | null {
  *     <td>Malaga,&nbsp;Spain</td>
  *   </tr>
  */
-export function parseCompetitionListing(html: string): MeetListingRow[] {
+export function parseCompetitionListing(html: string, year: number): MeetListingRow[] {
   const root = parse(html);
-  const year = extractYear(html);
 
   const anchors = root.querySelectorAll('a[href*="onecompetition.php"]');
 
@@ -86,7 +81,7 @@ export function parseCompetitionListing(html: string): MeetListingRow[] {
     const dateRaw = tds[3]?.text?.trim() ?? '';
     const locationRaw = tds[4]?.text?.replace(/ /g, ' ').trim() ?? '';
 
-    const date = dateRaw ? parseDateRange(dateRaw, year) : null;
+    const date = dateRaw ? parseListingDate(dateRaw, year) : null;
 
     // locationRaw is "Town, Country" — split on last comma
     let town: string | null = null;
