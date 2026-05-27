@@ -24,12 +24,17 @@ export async function defaultFetchCsv(): Promise<Readable> {
     pump();
   });
 
-  // Open the zip and locate openpowerlifting.csv. The archive contains a folder
-  // like `openpowerlifting-2026-05-27/openpowerlifting.csv` — we don't hardcode
-  // the folder name, we find the file by basename.
+  // Open the zip and locate the data CSV. The archive structure is:
+  //   openpowerlifting-YYYY-MM-DD/openpowerlifting-YYYY-MM-DD-<hash>.csv
+  //   openpowerlifting-YYYY-MM-DD/LICENSE.txt
+  //   openpowerlifting-YYYY-MM-DD/README.txt
+  // The CSV filename includes both the date and a short git hash, so we match by
+  // suffix + the "openpowerlifting-" prefix to avoid LICENSE/README.
   const directory = await Open.file(tmpZip);
-  const csvFile = directory.files.find((f) => f.path.endsWith('/openpowerlifting.csv'));
-  if (!csvFile) throw new Error(`openpowerlifting.csv not found in ${OPL_ZIP_URL}`);
+  const csvFile = directory.files.find((f) =>
+    f.path.endsWith('.csv') && f.path.includes('openpowerlifting-'),
+  );
+  if (!csvFile) throw new Error(`openpowerlifting CSV not found in ${OPL_ZIP_URL}`);
 
   // unzipper's .stream() returns a node Readable.
   return csvFile.stream() as unknown as Readable;
