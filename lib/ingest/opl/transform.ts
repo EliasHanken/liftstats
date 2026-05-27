@@ -1,4 +1,4 @@
-import type { OplRawRow, NormalizedRow, SkipReason } from './types';
+import type { OplRawRow, NormalizedRow, SkipReason, ParsedAttempt } from './types';
 import { meetSourceId } from './hash';
 
 export type TransformResult =
@@ -22,6 +22,18 @@ function parsePlace(p: string): number | null {
   if (p === '') return null;
   const n = parseInt(p, 10);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseAttempt(raw: string, lift: 'SQ' | 'BP' | 'DL', attemptNo: 1 | 2 | 3 | 4): ParsedAttempt | null {
+  if (raw === '' || raw === '0' || raw === '0.0') return null;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return null;
+  return {
+    lift,
+    attemptNo,
+    weightKg: Math.abs(n),
+    result: n < 0 ? 'no_lift' : 'good',
+  };
 }
 
 function slugify(s: string): string {
@@ -49,6 +61,14 @@ export function transformRow(row: OplRawRow): TransformResult {
   // We rely on the (slug) unique index — collisions within a sex are rare in OPL data,
   // and dedup is handled at upsert time via the slug as natural key.
   const slug = slugify(row.Name) + (row.Sex === 'M' ? '' : '-' + row.Sex.toLowerCase());
+
+  const attempts: ParsedAttempt[] = [];
+  const SQ_COLS: [string, 1 | 2 | 3 | 4][] = [[row.Squat1Kg, 1], [row.Squat2Kg, 2], [row.Squat3Kg, 3], [row.Squat4Kg, 4]];
+  const BP_COLS: [string, 1 | 2 | 3 | 4][] = [[row.Bench1Kg, 1], [row.Bench2Kg, 2], [row.Bench3Kg, 3], [row.Bench4Kg, 4]];
+  const DL_COLS: [string, 1 | 2 | 3 | 4][] = [[row.Deadlift1Kg, 1], [row.Deadlift2Kg, 2], [row.Deadlift3Kg, 3], [row.Deadlift4Kg, 4]];
+  for (const [raw, no] of SQ_COLS) { const a = parseAttempt(raw, 'SQ', no); if (a) attempts.push(a); }
+  for (const [raw, no] of BP_COLS) { const a = parseAttempt(raw, 'BP', no); if (a) attempts.push(a); }
+  for (const [raw, no] of DL_COLS) { const a = parseAttempt(raw, 'DL', no); if (a) attempts.push(a); }
 
   return {
     ok: true,
@@ -89,6 +109,7 @@ export function transformRow(row: OplRawRow): TransformResult {
         wilks: emptyToNull(row.Wilks),
         dots: emptyToNull(row.Dots),
         tested: row.Tested === 'Yes',
+        attempts,
       },
     },
   };

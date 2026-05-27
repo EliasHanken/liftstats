@@ -32,6 +32,7 @@ function makeRow(overrides: Partial<NormalizedRow['lifter']> = {}): NormalizedRo
       wilks: null,
       dots: null,
       tested: true,
+      attempts: [],
     },
   };
 }

@@ -15,6 +15,18 @@ const baseRow: OplRawRow = {
   Best3SquatKg: '377.5',
   Best3BenchKg: '272.5',
   Best3DeadliftKg: '400.0',
+  Squat1Kg: '350.0',
+  Squat2Kg: '370.0',
+  Squat3Kg: '-377.5',
+  Squat4Kg: '',
+  Bench1Kg: '260.0',
+  Bench2Kg: '272.5',
+  Bench3Kg: '',
+  Bench4Kg: '',
+  Deadlift1Kg: '380.0',
+  Deadlift2Kg: '400.0',
+  Deadlift3Kg: '420.0',
+  Deadlift4Kg: '',
   TotalKg: '1050.0',
   Place: '1',
   Dots: '',
@@ -116,5 +128,32 @@ describe('transformRow', () => {
     if (!tested.ok || !untested.ok) return;
     expect(tested.row.entry.tested).toBe(true);
     expect(untested.row.entry.tested).toBe(false);
+  });
+
+  it('parses non-empty attempts with OPL sign convention', () => {
+    const r = transformRow(baseRow);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const a = r.row.entry.attempts;
+    expect(a).toHaveLength(8);
+    expect(a.filter((x) => x.lift === 'SQ')).toEqual([
+      { lift: 'SQ', attemptNo: 1, weightKg: 350,   result: 'good' },
+      { lift: 'SQ', attemptNo: 2, weightKg: 370,   result: 'good' },
+      { lift: 'SQ', attemptNo: 3, weightKg: 377.5, result: 'no_lift' },
+    ]);
+    expect(a.filter((x) => x.lift === 'BP')).toHaveLength(2);
+    expect(a.filter((x) => x.lift === 'DL').every((x) => x.result === 'good')).toBe(true);
+  });
+
+  it('skips attempts entirely when all cells empty (older meets)', () => {
+    const r = transformRow({
+      ...baseRow,
+      Squat1Kg: '', Squat2Kg: '', Squat3Kg: '', Squat4Kg: '',
+      Bench1Kg: '', Bench2Kg: '', Bench3Kg: '', Bench4Kg: '',
+      Deadlift1Kg: '', Deadlift2Kg: '', Deadlift3Kg: '', Deadlift4Kg: '',
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.row.entry.attempts).toEqual([]);
   });
 });
