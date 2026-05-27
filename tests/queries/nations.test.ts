@@ -131,4 +131,28 @@ describe('nations queries', () => {
       expect(totalCounted).toBe(5);
     });
   });
+
+  it('getEqVsRawDeltaData respects an explicit limit', async () => {
+    const { getEqVsRawDeltaData } = await import('@/lib/db/queries/nations');
+    const r = await getEqVsRawDeltaData(t.db, 'NOR', { activeSince: '2023-01-01', limit: 200 });
+    expect(r.length).toBeLessThanOrEqual(200);
+  });
+
+  it('nation queries accept an ageClass filter', async () => {
+    const { eq } = await import('drizzle-orm');
+    const { getCountryStats } = await import('@/lib/db/queries/nations');
+    const [n1] = await t.db.select().from(lifter).where(eq(lifter.slug, 'n1-m'));
+    const [m] = await t.db.insert(meet).values({
+      source: 'opl', sourceMeetId: 'jr-meet', federation: 'IPF',
+      date: '2025-06-01', name: 'Jr Meet',
+    }).returning();
+    await t.db.insert(entry).values({
+      lifterId: n1.id, meetId: m.id, equipment: 'Raw', weightClassKg: '83',
+      glPoints: '100', ageClass: 'Junior',
+    });
+    const all = await getCountryStats(t.db, 'NOR', { activeSince: '2023-01-01' });
+    const jr  = await getCountryStats(t.db, 'NOR', { activeSince: '2023-01-01', ageClass: 'Junior' });
+    expect(all.totalLifters).toBeGreaterThan(jr.totalLifters);
+    expect(jr.totalLifters).toBe(1);
+  });
 });

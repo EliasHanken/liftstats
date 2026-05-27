@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 
 type AnyDb = any;
 
-export type ActiveOpts = { activeSince?: string };
+export type ActiveOpts = { activeSince?: string; ageClass?: string };
 
 export type CountryListRow = { country: string; lifters: number };
 
@@ -36,9 +36,10 @@ export type CountryStats = {
 export async function getCountryStats(
   db: AnyDb,
   country: string,
-  { activeSince }: ActiveOpts = {},
+  { activeSince, ageClass }: ActiveOpts = {},
 ): Promise<CountryStats> {
   const dateFilter = activeSince ? sql`AND m.date >= ${activeSince}` : sql``;
+  const ageFilter = ageClass ? sql`AND e.age_class = ${ageClass}` : sql``;
   const result = await db.execute(sql`
     WITH active AS (
       SELECT
@@ -49,6 +50,7 @@ export async function getCountryStats(
       JOIN entry e ON e.lifter_id = l.id
       JOIN meet  m ON m.id = e.meet_id
       WHERE l.country = ${country} ${dateFilter}
+        ${ageFilter}
       GROUP BY l.id, l.sex
     )
     SELECT
@@ -85,9 +87,10 @@ export type GlDistribution = { bins: GlBin[] };
 export async function getGlDistribution(
   db: AnyDb,
   country: string,
-  { activeSince }: ActiveOpts = {},
+  { activeSince, ageClass }: ActiveOpts = {},
 ): Promise<GlDistribution> {
   const dateFilter = activeSince ? sql`AND m.date >= ${activeSince}` : sql``;
+  const ageFilter = ageClass ? sql`AND e.age_class = ${ageClass}` : sql``;
   const result = await db.execute(sql`
     WITH binned AS (
       SELECT
@@ -100,6 +103,7 @@ export async function getGlDistribution(
       WHERE l.country = ${country}
         AND e.gl_points IS NOT NULL
         ${dateFilter}
+        ${ageFilter}
     )
     SELECT bin_low::int AS low, sex, eq_class, COUNT(*)::int AS n
     FROM binned
@@ -139,9 +143,10 @@ export type TopByDiscipline = { raw: TopRow[]; eq: TopRow[] };
 export async function getTopByDiscipline(
   db: AnyDb,
   country: string,
-  { activeSince, limit = 10 }: ActiveOpts & { limit?: number } = {},
+  { activeSince, ageClass, limit = 10 }: ActiveOpts & { limit?: number } = {},
 ): Promise<TopByDiscipline> {
   const dateFilter = activeSince ? sql`AND m.date >= ${activeSince}` : sql``;
+  const ageFilter = ageClass ? sql`AND e.age_class = ${ageClass}` : sql``;
   const raw = await db.execute(sql`
     SELECT slug, name, sex, "bestGl", equipment, "weightClassKg" FROM (
       SELECT DISTINCT ON (l.id)
@@ -156,6 +161,7 @@ export async function getTopByDiscipline(
         AND e.equipment = 'Raw'
         AND e.gl_points IS NOT NULL
         ${dateFilter}
+        ${ageFilter}
       ORDER BY l.id, e.gl_points DESC
     ) ranked
     ORDER BY "bestGl"::numeric DESC
@@ -175,6 +181,7 @@ export async function getTopByDiscipline(
         AND e.equipment IN ('Single','Multi','Wraps','Unlimited')
         AND e.gl_points IS NOT NULL
         ${dateFilter}
+        ${ageFilter}
       ORDER BY l.id, e.gl_points DESC
     ) ranked
     ORDER BY "bestGl"::numeric DESC
@@ -196,9 +203,10 @@ export type HeatmapCell = {
 export async function getWeightClassDistribution(
   db: AnyDb,
   country: string,
-  { activeSince }: ActiveOpts = {},
+  { activeSince, ageClass }: ActiveOpts = {},
 ): Promise<HeatmapCell[]> {
   const dateFilter = activeSince ? sql`AND m.date >= ${activeSince}` : sql``;
+  const ageFilter = ageClass ? sql`AND e.age_class = ${ageClass}` : sql``;
   const result = await db.execute(sql`
     SELECT l.sex, e.equipment, e.weight_class_kg AS "weightClassKg",
            COUNT(DISTINCT l.id)::int AS lifters
@@ -207,6 +215,7 @@ export async function getWeightClassDistribution(
     JOIN meet  m ON m.id = e.meet_id
     WHERE l.country = ${country}
       ${dateFilter}
+      ${ageFilter}
     GROUP BY l.sex, e.equipment, e.weight_class_kg
     ORDER BY lifters DESC
   `);
@@ -224,9 +233,10 @@ export type EqRawDeltaRow = {
 export async function getEqVsRawDeltaData(
   db: AnyDb,
   country: string,
-  { activeSince }: ActiveOpts = {},
+  { activeSince, ageClass, limit = 200 }: ActiveOpts & { limit?: number } = {},
 ): Promise<EqRawDeltaRow[]> {
   const dateFilter = activeSince ? sql`AND m.date >= ${activeSince}` : sql``;
+  const ageFilter = ageClass ? sql`AND e.age_class = ${ageClass}` : sql``;
   const result = await db.execute(sql`
     SELECT
       l.slug, l.name, l.sex,
@@ -238,11 +248,13 @@ export async function getEqVsRawDeltaData(
     WHERE l.country = ${country}
       AND e.gl_points IS NOT NULL
       ${dateFilter}
+      ${ageFilter}
     GROUP BY l.slug, l.name, l.sex
     HAVING
       MAX(CASE WHEN e.equipment = 'Raw' THEN 1 ELSE 0 END) = 1
       AND MAX(CASE WHEN e.equipment IN ('Single','Multi','Wraps','Unlimited') THEN 1 ELSE 0 END) = 1
     ORDER BY MAX(e.gl_points::numeric) DESC
+    LIMIT ${limit}
   `);
   return ((result as any).rows ?? result) as EqRawDeltaRow[];
 }
