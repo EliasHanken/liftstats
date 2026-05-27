@@ -83,31 +83,47 @@ export async function upsertEntries(
   meetIds: Map<string, number>,
 ): Promise<number> {
   if (rows.length === 0) return 0;
-  const values = rows
-    .map((r) => {
-      const lifterId = lifterIds.get(r.lifter.slug);
-      const meetId = meetIds.get(r.meet.sourceMeetId);
-      if (lifterId === undefined || meetId === undefined) return null;
-      return {
-        lifterId,
-        meetId,
-        equipment: r.entry.equipment,
-        weightClassKg: r.entry.weightClassKg,
-        bodyweightKg: r.entry.bodyweightKg,
-        age: r.entry.age,
-        ageClass: r.entry.ageClass,
-        division: r.entry.division,
-        bestSqKg: r.entry.bestSqKg,
-        bestBpKg: r.entry.bestBpKg,
-        bestDlKg: r.entry.bestDlKg,
-        totalKg: r.entry.totalKg,
-        place: r.entry.place,
-        glPoints: r.entry.glPoints,
-        wilks: r.entry.wilks,
-        dots: r.entry.dots,
-      };
-    })
-    .filter((v): v is NonNullable<typeof v> => v !== null);
+  // OPL lists the same lift session multiple times under different divisions
+  // (Open + Masters 1, Junior + Open, etc.). Their (lifter, meet, equipment, class)
+  // key is identical — the only difference is the Division/AgeClass label.
+  // Within a single batch INSERT, ON CONFLICT can only handle each conflict once,
+  // so we dedup in-memory keeping the last occurrence. The choice of "last" is
+  // arbitrary; all the duplicate rows describe the same physical lift.
+  const dedupMap = new Map<string, {
+    lifterId: number; meetId: number;
+    equipment: NormalizedRow['entry']['equipment'];
+    weightClassKg: string;
+    bodyweightKg: string | null; age: string | null;
+    ageClass: string | null; division: string | null;
+    bestSqKg: string | null; bestBpKg: string | null; bestDlKg: string | null;
+    totalKg: string | null; place: number | null;
+    glPoints: string | null; wilks: string | null; dots: string | null;
+  }>();
+  for (const r of rows) {
+    const lifterId = lifterIds.get(r.lifter.slug);
+    const meetId = meetIds.get(r.meet.sourceMeetId);
+    if (lifterId === undefined || meetId === undefined) continue;
+    const key = `${lifterId}|${meetId}|${r.entry.equipment}|${r.entry.weightClassKg}`;
+    dedupMap.set(key, {
+      lifterId,
+      meetId,
+      equipment: r.entry.equipment,
+      weightClassKg: r.entry.weightClassKg,
+      bodyweightKg: r.entry.bodyweightKg,
+      age: r.entry.age,
+      ageClass: r.entry.ageClass,
+      division: r.entry.division,
+      bestSqKg: r.entry.bestSqKg,
+      bestBpKg: r.entry.bestBpKg,
+      bestDlKg: r.entry.bestDlKg,
+      totalKg: r.entry.totalKg,
+      place: r.entry.place,
+      glPoints: r.entry.glPoints,
+      wilks: r.entry.wilks,
+      dots: r.entry.dots,
+    });
+  }
+  const values = [...dedupMap.values()];
   if (values.length === 0) return 0;
 
   const inserted = await db
