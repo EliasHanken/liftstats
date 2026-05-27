@@ -69,6 +69,25 @@ describe('nations queries', () => {
     expect(s.eqLifters).toBe(0);
   });
 
+  describe('getTopByDiscipline', () => {
+    it('returns top raw and top eq lifters per country, one row per lifter', async () => {
+      const { getTopByDiscipline } = await import('@/lib/db/queries/nations');
+      const r = await getTopByDiscipline(t.db, 'NOR', { activeSince: '2023-01-01', limit: 10 });
+      expect(r.raw.length).toBeGreaterThan(0);
+      expect(r.eq.length).toBeGreaterThan(0);
+      expect(r.raw[0].slug).toBe('n4-f');
+      expect(Number(r.raw[0].bestGl)).toBe(120);
+      expect(r.eq[0].slug).toBe('n2-m');
+      expect(Number(r.eq[0].bestGl)).toBe(110);
+    });
+
+    it('respects limit', async () => {
+      const { getTopByDiscipline } = await import('@/lib/db/queries/nations');
+      const r = await getTopByDiscipline(t.db, 'NOR', { activeSince: '2023-01-01', limit: 2 });
+      expect(r.raw.length).toBeLessThanOrEqual(2);
+    });
+  });
+
   describe('getGlDistribution', () => {
     it('returns histogram bins with the four (sex × equipment) count fields', async () => {
       const { getGlDistribution } = await import('@/lib/db/queries/nations');
