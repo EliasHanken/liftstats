@@ -9,6 +9,10 @@ export const WHITELIST: { federation: RegExp; namePattern: RegExp }[] = [
     federation: /European Powerlifting Federation/i,
     namePattern: /European.*Championship/i,
   },
+  {
+    federation: /(Norwegian|Norges)[\s\S]*Federation|Norges Styrkel[øo]ftforbund|Norwegian Powerlifting/i,
+    namePattern: /./,
+  },
 ];
 
 export function isWhitelisted(meet: MeetListingRow): boolean {

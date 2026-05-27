@@ -44,4 +44,25 @@ describe('isWhitelisted', () => {
       name: 'Some Random Open',
     }))).toBe(false);
   });
+
+  it('keeps NSF (Norwegian) federation meets', () => {
+    expect(isWhitelisted(meet({
+      federation: 'Norwegian Powerlifting Federation',
+      name: 'NSF Norgesmesterskap Klassisk 2024',
+    }))).toBe(true);
+  });
+
+  it('keeps meets whose federation field uses the Norwegian spelling', () => {
+    expect(isWhitelisted(meet({
+      federation: 'Norges Styrkeløftforbund',
+      name: 'Junior NM 2024',
+    }))).toBe(true);
+  });
+
+  it('still rejects unrelated regional meets', () => {
+    expect(isWhitelisted(meet({
+      federation: 'Asian Powerlifting Federation',
+      name: 'Asian Open Championships',
+    }))).toBe(false);
+  });
 });
