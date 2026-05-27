@@ -31,6 +31,7 @@ function makeRow(overrides: Partial<NormalizedRow['lifter']> = {}): NormalizedRo
       glPoints: '124.86',
       wilks: null,
       dots: null,
+      tested: true,
     },
   };
 }
@@ -80,5 +81,14 @@ describe('upsert helpers', () => {
     expect(inserted2).toBe(0);
     const all = await t.db.select().from(entry);
     expect(all).toHaveLength(1);
+  });
+
+  it('round-trips tested boolean through upsertEntries', async () => {
+    const rows = [makeRow({ name: 'Test Tested', slug: 'test-tested' })];
+    const lifterIds = await upsertLifters(t.db, rows);
+    const meetIds = await upsertMeets(t.db, rows);
+    await upsertEntries(t.db, rows, lifterIds, meetIds);
+    const all = await t.db.select().from(entry);
+    expect(all.some((e) => e.tested === true)).toBe(true);
   });
 });

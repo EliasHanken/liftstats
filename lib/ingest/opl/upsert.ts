@@ -98,6 +98,7 @@ export async function upsertEntries(
     bestSqKg: string | null; bestBpKg: string | null; bestDlKg: string | null;
     totalKg: string | null; place: number | null;
     glPoints: string | null; wilks: string | null; dots: string | null;
+    tested: boolean;
   }>();
   for (const r of rows) {
     const lifterId = lifterIds.get(r.lifter.slug);
@@ -121,6 +122,7 @@ export async function upsertEntries(
       glPoints: r.entry.glPoints,
       wilks: r.entry.wilks,
       dots: r.entry.dots,
+      tested: r.entry.tested,
     });
   }
   const values = [...dedupMap.values()];
@@ -141,6 +143,7 @@ export async function upsertEntries(
         glPoints: sql`excluded.gl_points`,
         wilks: sql`excluded.wilks`,
         dots: sql`excluded.dots`,
+        tested: sql`excluded.tested`,
       },
     })
     .returning({ id: entry.id, xmax: sql<number>`xmax` });
