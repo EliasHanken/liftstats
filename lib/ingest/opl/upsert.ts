@@ -159,15 +159,27 @@ export async function upsertAttemptsFromOpl(
   db: AnyDb,
   batches: AttemptBatch[],
 ): Promise<number> {
-  const values = batches.flatMap((b) =>
-    b.attempts.map((a) => ({
-      entryId: b.entryId,
-      lift: a.lift,
-      attemptNo: a.attemptNo,
-      weightKg: a.weightKg.toString(),
-      result: a.result,
-    })),
-  );
+  // OPL splits the same lift session into multiple rows when a lifter competes
+  // in overlapping divisions (Open + Masters 1, etc.) — they share the same
+  // (lifter, meet, equipment, class) entry. The runner's lookup correctly
+  // resolves all of them to the same entryId, so within one batch we can see
+  // multiple AttemptBatch entries for the same entryId with identical attempts.
+  // Dedup by (entryId, lift, attemptNo) — last write wins — to avoid the
+  // "ON CONFLICT DO UPDATE command cannot affect row a second time" error.
+  const dedup = new Map<string, { entryId: number; lift: ParsedAttempt['lift']; attemptNo: ParsedAttempt['attemptNo']; weightKg: string; result: ParsedAttempt['result'] }>();
+  for (const b of batches) {
+    for (const a of b.attempts) {
+      const key = `${b.entryId}|${a.lift}|${a.attemptNo}`;
+      dedup.set(key, {
+        entryId: b.entryId,
+        lift: a.lift,
+        attemptNo: a.attemptNo,
+        weightKg: a.weightKg.toString(),
+        result: a.result,
+      });
+    }
+  }
+  const values = [...dedup.values()];
   if (values.length === 0) return 0;
 
   await db
