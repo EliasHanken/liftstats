@@ -32,16 +32,23 @@ function normalizeMeetName(s: string): string {
     'ipf', 'epf',
     'men', 'mens', 'women', 'womens',
     'of', 'the', 'and',
+    'open',           // GoodLift inconsistently adds/omits "Open"
+    'powerlifting',   // GoodLift omits "Powerlifting" in many names
   ]);
   return s
     .toLowerCase()
-    // normalize curly apostrophes and similar to ASCII
+    // Normalize curly apostrophes to ASCII
     .replace(/['']/g, "'")
-    // "men's" / "women's" → "men" / "women" so the set filter catches them
+    // Drop leading ordinal edition prefixes like "48th", "7th", "1st", "3rd"
+    .replace(/^\s*\d+(st|nd|rd|th)\b/, '')
+    // "men's" / "women's" → "men" / "women" (then filtered as noise)
     .replace(/\b(men|women)'s\b/g, '$1')
-    // championships → championship
+    // Singularize / canonicalize specific terms
     .replace(/championships\b/g, 'championship')
-    // strip non-alphanumeric to spaces, then collapse
+    // sub-junior(s) and subjuniors → single token "subjunior"
+    .replace(/sub-?juniors?\b/g, 'subjunior')
+    .replace(/juniors\b/g, 'junior')
+    // Non-alphanumeric → space, then collapse
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
     .split(/\s+/)

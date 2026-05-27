@@ -105,4 +105,64 @@ describe('GoodLift matchers', () => {
     });
     expect(found).toBeNull();
   });
+
+  it('matches when GoodLift drops the "Powerlifting" word', async () => {
+    // OPL stored "European Open Classic Powerlifting Championships";
+    // GoodLift might call it "European Men's Classic Championships"
+    // (with no "Powerlifting" and Open implicit).
+    const [m] = await t.db.insert(meet).values({
+      source: 'opl',
+      sourceMeetId: 'opl-extra-1',
+      federation: 'EPF',
+      date: '2024-03-11',
+      name: 'European Open Classic Powerlifting Championships',
+      country: null,
+    }).returning();
+    const found = await findMeetByListing(t.db, {
+      cid: 5001,
+      federation: 'European Powerlifting Federation',
+      name: "European Men's Classic Championships",
+      date: '2024-03-11',
+      country: null, town: null,
+    });
+    expect(found?.id).toBe(m.id);
+  });
+
+  it('matches when name has an ordinal prefix like "48th"', async () => {
+    const [m] = await t.db.insert(meet).values({
+      source: 'opl',
+      sourceMeetId: 'opl-extra-2',
+      federation: 'IPF',
+      date: '2024-11-10',
+      name: 'World Open Equipped Powerlifting Championships',
+      country: null,
+    }).returning();
+    const found = await findMeetByListing(t.db, {
+      cid: 5002,
+      federation: 'International Powerlifting Federation',
+      name: "48th World Open Men's Equipped Championships",
+      date: '2024-11-10',
+      country: null, town: null,
+    });
+    expect(found?.id).toBe(m.id);
+  });
+
+  it('matches when juniors/sub-juniors pluralization differs', async () => {
+    const [m] = await t.db.insert(meet).values({
+      source: 'opl',
+      sourceMeetId: 'opl-extra-3',
+      federation: 'EPF',
+      date: '2024-10-04',
+      name: 'European Classic Sub-junior and Junior Powerlifting Championships',
+      country: null,
+    }).returning();
+    const found = await findMeetByListing(t.db, {
+      cid: 5003,
+      federation: 'European Powerlifting Federation',
+      name: "European Men's Juniors and Sub-Juniors Classic Championships",
+      date: '2024-10-04',
+      country: null, town: null,
+    });
+    expect(found?.id).toBe(m.id);
+  });
 });
