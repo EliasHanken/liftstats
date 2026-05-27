@@ -8,7 +8,11 @@ import { eq } from 'drizzle-orm';
 import { revalidateTag } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 800;  // Fluid Compute Pro ceiling
+// 300s is the Vercel Hobby plan max. For the initial full-history ingest (which
+// takes ~5-10 min for ~3M rows), use the local CLI: `npm run ingest:opl:local`.
+// The weekly cron handles incremental updates which fit comfortably under 300s.
+// Bump to 800 when on Vercel Pro.
+export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`.
