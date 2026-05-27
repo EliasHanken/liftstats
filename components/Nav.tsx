@@ -7,7 +7,6 @@ export function Nav() {
         <Link href="/" className="text-zinc-50 font-semibold tracking-tight">Liftstats</Link>
         <Link href="/rankings" className="text-zinc-400 hover:text-zinc-100">Rankings</Link>
         <Link href="/nations"  className="text-zinc-400 hover:text-zinc-100">Nations</Link>
-        <Link href="/search"   className="text-zinc-400 hover:text-zinc-100">Search</Link>
       </div>
     </nav>
   );
