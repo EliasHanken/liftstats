@@ -25,6 +25,7 @@ export const lifter = pgTable('lifter', {
 }, (t) => [
   // pg_trgm index is added in a follow-up SQL migration in Task 7
   index('lifter_name_idx').on(t.name),
+  index('lifter_country_idx').on(t.country),
 ]);
 
 // --- meet ---

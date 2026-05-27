@@ -1,0 +1,1 @@
+CREATE INDEX "lifter_country_idx" ON "lifter" USING btree ("country");
