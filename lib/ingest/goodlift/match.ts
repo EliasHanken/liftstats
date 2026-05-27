@@ -73,13 +73,16 @@ export async function findMeetByListing(
 
   const target = normalizeMeetName(listing.name);
 
-  // Pull candidates by federation, optionally narrowed to a ±3-day window
-  // around the listing date. The window is permissive because OPL and GoodLift
-  // sometimes disagree on which day of a multi-day meet to record.
+  // Pull candidates by federation, narrowed to a ±30-day window around the
+  // listing date. The window is wide because OPL and GoodLift can disagree on
+  // dates by a couple weeks (different conventions for multi-stage events,
+  // OPL bulk-importing on the registration date vs the meet date, etc.).
+  // 30 days is still narrow enough that the same-name annual championship in
+  // year N doesn't collide with year N±1 (championships are >30 days apart).
   const conds: any[] = [eq(meet.federation, oplFed)];
   if (listing.date) {
-    conds.push(gte(meet.date, shiftDate(listing.date, -3)));
-    conds.push(lte(meet.date, shiftDate(listing.date, 3)));
+    conds.push(gte(meet.date, shiftDate(listing.date, -30)));
+    conds.push(lte(meet.date, shiftDate(listing.date, 30)));
   }
   const candidates: { id: number; name: string; date: string }[] = await db
     .select({ id: meet.id, name: meet.name, date: meet.date })
